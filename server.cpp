@@ -1,26 +1,26 @@
 ﻿#include "server.h"
+#include <QThread>
 #include <QTcpSocket>
 #include "core.h"
 #include "serverthread.h"
-Server::Server(QString base,QObject *parent) : QTcpServer(parent),basePath(base) {
+Server::Server(QString base,bool needpass,QObject *parent) : QTcpServer(parent),basePath(base) {
+    this->threads.setMaxThreadCount(this->maxThread);
+    this->needPass = needpass;
 }
 
 void Server::setMaxThread(int v) {
     this->maxThread = v;
-}
-void Server::clientDisconnect() {
-    this->activeThread--;
+    this->threads.setMaxThreadCount(v);
 }
 int Server::getMaxThread() {
     return this->maxThread;
 }
 int Server::currentActiveThread() {
-    return this->activeThread;
+    return this->threads.activeThreadCount();
 }
 void Server::incomingConnection(qintptr socketDescriptor) {
-    emit serverStarted();
-    qDebug()<<"New Connection";
-    if(this->activeThread+1>this->maxThread) {
+    emit newConn();
+    if(this->threads.activeThreadCount()+1>this->maxThread) {
         QTcpSocket socket;
         if(!socket.setSocketDescriptor(socketDescriptor)) {
             emit serverConnectionError("get socket error when declining a client");
@@ -31,13 +31,13 @@ void Server::incomingConnection(qintptr socketDescriptor) {
         socket.flush();
         return;
     } else {
-        qDebug()<<socketDescriptor;
-        this->activeThread++;
-        ServerThread * thread = new ServerThread(basePath,socketDescriptor,0);
-        connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
-        connect(thread,&ServerThread::finished,this,&Server::clientDisconnect);
-        qDebug()<<"aha";
-        thread->start();
+        ServerThread * thread = new ServerThread(basePath,socketDescriptor,needPass,0);
+        connect(thread,&ServerThread::toLog,this,&Server::receive);
+        thread->setAutoDelete(true);
+        this->threads.start(thread);
     }
-    emit serverClosed();
+    emit connHandled();
+}
+void Server::receive(QString msg) {
+    emit resend(msg);
 }

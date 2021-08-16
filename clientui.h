@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include "client.h"
+#include "uploadprogress.h"
 namespace Ui {
 class ClientUI;
 }
@@ -21,11 +22,12 @@ private slots:
 
     void done();
     void on_pushButton_clicked();
-
+    void excepRestore();
 private:
     Ui::ClientUI *ui;
     QStringList files;
     Client * client;
+    UploadProgress * showW;
 };
 
 #endif // CLIENTUI_H

@@ -4,7 +4,9 @@
 #define DATABLOCK
 #define INNER_FUNCTION
 #define UNIT
+#include <QMap>
 #include <QString>
+
 const int hash_base = 31;
 const int hash_mod = 1000000007;
 const int check_code_mod = 998244353;
@@ -92,6 +94,9 @@ struct head_file_info {
     unsigned long long file_size;
     char file_name[520];
 };
+
+INNER_FUNCTION void loadDatabase(QString file);
+INNER_FUNCTION bool checkLogin(QString user,unsigned int pwd);
 INNER_FUNCTION int fast_pow(int,int);
 INNER_FUNCTION unsigned int hash(char*);
 INNER_FUNCTION int check_code(const struct head_datablock&);

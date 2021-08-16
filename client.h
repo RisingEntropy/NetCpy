@@ -5,12 +5,11 @@
 #include <QVector>
 #include <QThread>
 #include "core.h"
-class Client : public QObject {
+class Client : public QThread {
     Q_OBJECT
 private:
     int waitReadyDuration = 30000;
     QObject *parent;
-    QTcpSocket *socket;
     QString host;
     QString userName;
     int pwdHash;
@@ -23,9 +22,11 @@ private:
     template<typename T>void writeFlush(T *src,int size);
     void transFile(QString path);
     void transCmd(int pos);
+    bool checkConnection();
 private slots:
     void connected();
 public:
+    QTcpSocket *socket;
     Client(QString host,int port,QString userName,unsigned int pwdHash,QObject *parent = nullptr);
     Client(QString host,int port,QString userName,QObject *parent = nullptr);
     ~Client();
@@ -35,6 +36,7 @@ public:
     void addCommand(command_info info);
     void clear();
     void finish();
+    void run()override;
 signals:
     void startTransferring();
     void connectSuccessful();
@@ -42,9 +44,11 @@ signals:
     void serverBusy();
     void versionInsuitable();
     void passwordWrong();
+    void noServerFound();
     void loginSuccessful();
-    void transferProgressUpdate(int fileTransferred,int totFiles);
+    void transferProgressUpdate(int v);
     void fileTransferProgressUpdate(QString fileName,int percent);
+    void exceptionOccur();
 };
 
 #endif // CLIENT_H

@@ -1,11 +1,14 @@
 ﻿#include "clientui.h"
 #include "ui_clientui.h"
+#include "uploadprogress.h"
 #include <QFileDialog>
 #include <QMessageBox>
 ClientUI::ClientUI(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::ClientUI) {
     ui->setupUi(this);
+    setFixedSize(this->size());
+    setAttribute(Qt::WA_DeleteOnClose);
 }
 
 ClientUI::~ClientUI() {
@@ -27,7 +30,12 @@ void ClientUI::on_pushButton_2_clicked() {
     for(auto x:list)
         ui->listWidget->addItem(x);
 }
-
+void ClientUI::excepRestore() {
+    this->client->deleteLater();
+    ui->pushButton->setText(tr("Transfer"));
+    ui->pushButton->setDisabled(false);
+    setEnabled(true);
+}
 void ClientUI::done() {
     this->files.clear();
     ui->listWidget->clear();
@@ -35,6 +43,8 @@ void ClientUI::done() {
     this->client->deleteLater();
     ui->pushButton->setText(tr("Transfer"));
     ui->pushButton->setDisabled(false);
+//    setWindowFlags(Qt::WindowMinMaxButtonsHint|Qt::WindowCloseButtonHint);
+    setEnabled(true);
 }
 
 void ClientUI::on_pushButton_clicked() {
@@ -58,9 +68,23 @@ void ClientUI::on_pushButton_clicked() {
     for(auto x:files) {
         client->addFile(x);
     }
-    qDebug()<<"Client Trans";
     connect(client,&Client::transferringFinish,this,&ClientUI::done);
-    client->startTrans();
+    connect(client,&Client::exceptionOccur,this,&ClientUI::excepRestore);
+    UploadProgress *show = new UploadProgress(nullptr);
+    show->setWindowModality(Qt::WindowModal);
+    connect(client,&Client::transferProgressUpdate,show,&UploadProgress::updateTotalProfress);
+    connect(client,&Client::fileTransferProgressUpdate,show,&UploadProgress::updateFileProgress);
+    connect(client,&Client::transferringFinish,show,&UploadProgress::finished);
+    connect(client,&Client::noServerFound,show,&UploadProgress::noServer);
+    connect(client,&Client::serverBusy,show,&UploadProgress::serverBusy);
+    connect(client,&Client::versionInsuitable,show,&UploadProgress::versionError);
+    connect(client,&Client::passwordWrong,show,&UploadProgress::passwordWrong);
+    client->start();
+    show->setWindowFlag(Qt::WindowMaximizeButtonHint);
+    show->setWindowFlag(Qt::WindowCloseButtonHint);
+    show->setAttribute(Qt::WA_DeleteOnClose);
+    setEnabled(false);
+    show->show();
     ui->pushButton->setText(tr("Transferring"));
     ui->pushButton->setDisabled(true);
 }

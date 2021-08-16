@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>316</width>
+    <width>569</width>
     <height>55</height>
    </rect>
   </property>
@@ -14,10 +14,10 @@
    <string>NetCpy</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QWidget" name="">
+   <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
-      <x>10</x>
+      <x>150</x>
       <y>10</y>
       <width>295</width>
       <height>30</height>

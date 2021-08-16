@@ -1,7 +1,8 @@
 ﻿#include "client.h"
 #include "core.h"
 #include <QFile>
-Client::Client(QString host,int port,QString userName,unsigned int pwdHash,QObject *parent) : QObject(parent) {
+#include <QTimer>
+Client::Client(QString host,int port,QString userName,unsigned int pwdHash,QObject *parent):QThread(parent) {
     this->parent = parent;
     this->host = host;
     this->port = port;
@@ -9,7 +10,7 @@ Client::Client(QString host,int port,QString userName,unsigned int pwdHash,QObje
     this->pwdHash = pwdHash;
     this->needPassword = 1;
 }
-Client::Client(QString host,int port,QString userName,QObject *parent) : QObject(parent) {
+Client::Client(QString host,int port,QString userName,QObject *parent):QThread(parent) {
     this->parent = parent;
     this->host = host;
     this->port = port;
@@ -49,18 +50,31 @@ void Client::clear() {
 void Client::startTrans() {
     this->socket = new QTcpSocket(parent);
     connect(this->socket,&QTcpSocket::readyRead,this,&Client::connected);
-    qDebug()<<"connected";
     this->socket->connectToHost(this->host,port);
 }
+void Client::run() {
+    this->socket = new QTcpSocket(parent);
+    this->socket->connectToHost(this->host,port);
+    if(!socket->isValid()) {
+        emit noServerFound();
+        emit exceptionOccur();
+        return;
+    }
+    connected();
+}
+bool Client::checkConnection() {
+    return true;
+}
 void Client::connected() {
+    if(!checkConnection()) {
+        return;
+    }
     emit startTransferring();
-
     head_return_code * ret = new head_return_code;
-    qDebug()<<1;
     read(ret,sizeof(head_return_code));
-    qDebug()<<"1";
     if(ret->state==busy_refuse) {
         emit serverBusy();
+        emit exceptionOccur();
         delete ret;
         return;
     }
@@ -75,12 +89,14 @@ void Client::connected() {
         delete ret;
         delete apply;
         emit versionInsuitable();
+        emit exceptionOccur();
         return;
     }
     if(ret -> state==password_wrong) {
         delete ret;
         delete apply;
         emit passwordWrong();
+        emit exceptionOccur();
         return;
     }
     emit loginSuccessful();
@@ -90,17 +106,21 @@ void Client::connected() {
         transCmd(i);
     }
     for(int i = 0; i<this->files.size(); i++) {
-        emit transferProgressUpdate(i+1,files.size());
+        if(i==files.size()-1)emit transferProgressUpdate(100);
+        else emit transferProgressUpdate((int)(1.0*i/files.size()*100));
         transFile(files[i]);
     }
     emit transferringFinish();
+    socket->close();
+    delete transinfo;
+    delete ret;
+
 }
 void Client::transCmd(int pos) {
 
 }
 void Client::transFile(QString path) {
     QFile file(path);
-    qDebug()<<"transFile";
     file.open(QIODevice::ReadOnly);
     head_file_info * info = make_file_info(path);
     writeFlush(info,sizeof (head_file_info));
@@ -118,9 +138,9 @@ void Client::transFile(QString path) {
         if(transed_size>stage) {
             percent++;
             stage+=step;
-//            emit fileTransferProgressUpdate(file.fileName(),percent);
-            qDebug()<<percent;
+            emit fileTransferProgressUpdate(file.fileName(),percent);
         }
+        if(socket->bytesToWrite()>1024*512)socket->flush();//buffer size is no bigger than 512KB
     }
     file.read(data->data,tot_size-transed_size);
     data->eof = 1;
@@ -132,7 +152,10 @@ void Client::transFile(QString path) {
     delete data;
     file.close();
 }
-void Client::finish() {
+void Client::
+
+
+finish() {
     if(this->socket!=nullptr)delete this->socket;
     clear();
 }

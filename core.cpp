@@ -1,4 +1,5 @@
-﻿#include "core.h"
+﻿#include <xlnt/xlnt.hpp>
+#include "core.h"
 #include <cstring>
 #include <QFile>
 #include <QFileInfo>
@@ -85,4 +86,20 @@ head_file_info * make_file_info(QString filePath) {
     ret->file_name_length = strlen(filename.toLatin1().data());
     ret->file_size = file.size();
     return ret;
+}
+QMap<QString,unsigned int> users;
+bool checkLogin(QString user, unsigned int pwd) {
+    return users[user]==pwd;
+}
+void loadDatabase(QString file) {
+    xlnt::workbook wb;
+    wb.load(file.toStdString());
+    auto sheet = wb.active_sheet();
+    auto row = sheet.rows();
+    int rows = sheet.rows().length();
+    for(int i = 0; i<rows; i++) {
+        std::string user = row[i][0].value<std::string>();
+        unsigned int pwd = row[i][1].value<unsigned int>();
+        users[QString::fromStdString(user)] = pwd;
+    }
 }

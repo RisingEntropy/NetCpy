@@ -14,22 +14,30 @@ public:
     explicit ServerUI(QWidget *parent = nullptr);
     ~ServerUI();
 
-private slots:
+public slots:
     void on_pushButton_clicked();
 
     void on_pushButton_2_clicked();
 
     void on_pushButton_3_clicked();
 
-    void serverStart();
+    void newConn();
 
-    void serverClose();
+    void connHandled();
 
     void serverError(QString msg);
+
+    void toLog(QString msg);
+private slots:
+    void on_radioButton_toggled(bool checked);
+
+    void on_pushButton_4_clicked();
+
 private:
     Ui::ServerUI *ui;
     Server *server;
     QString basePath;
+    QString databse;
 };
 
 #endif // SERVERUI_H
