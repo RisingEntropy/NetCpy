@@ -2,6 +2,7 @@
 #include "core.h"
 #include <QFile>
 #include <QTimer>
+#include <QHostAddress>
 Client::Client(QString host,int port,QString userName,unsigned int pwdHash,QObject *parent):QThread(parent) {
     this->parent = parent;
     this->host = host;
@@ -50,11 +51,12 @@ void Client::clear() {
 void Client::startTrans() {
     this->socket = new QTcpSocket(parent);
     connect(this->socket,&QTcpSocket::readyRead,this,&Client::connected);
-    this->socket->connectToHost(this->host,port);
+    this->socket->connectToHost(QHostAddress(this->host),port);
 }
 void Client::run() {
     this->socket = new QTcpSocket(parent);
     this->socket->connectToHost(this->host,port);
+    this->socket->waitForConnected();
     if(!socket->isValid()) {
         emit noServerFound();
         emit exceptionOccur();
@@ -66,9 +68,6 @@ bool Client::checkConnection() {
     return true;
 }
 void Client::connected() {
-    if(!checkConnection()) {
-        return;
-    }
     emit startTransferring();
     head_return_code * ret = new head_return_code;
     read(ret,sizeof(head_return_code));
@@ -110,6 +109,8 @@ void Client::connected() {
         else emit transferProgressUpdate((int)(1.0*i/files.size()*100));
         transFile(files[i]);
     }
+    ret = new head_return_code;
+    read(ret,sizeof(head_return_code));
     emit transferringFinish();
     socket->close();
     delete transinfo;
@@ -125,6 +126,7 @@ void Client::transFile(QString path) {
     head_file_info * info = make_file_info(path);
     writeFlush(info,sizeof (head_file_info));
     head_datablock *data = new head_datablock;
+    memset((char*)data,0,sizeof(head_datablock));
     unsigned long long tot_size = file.size();
     unsigned long long transed_size = 0;
     unsigned long long step = tot_size/100;
@@ -140,7 +142,7 @@ void Client::transFile(QString path) {
             stage+=step;
             emit fileTransferProgressUpdate(file.fileName(),percent);
         }
-        if(socket->bytesToWrite()>1024*512)socket->flush();//buffer size is no bigger than 512KB
+        if(socket->bytesToWrite()>1024*128)socket->flush();//buffer size is no bigger than 512KB
     }
     file.read(data->data,tot_size-transed_size);
     data->eof = 1;

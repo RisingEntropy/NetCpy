@@ -9,10 +9,7 @@ ServerThread::ServerThread(QString base,qintptr desc,bool needpass,QObject *pren
 }
 template<typename T>
 void ServerThread::read(T *dst, int size) {
-    if(socket->state()==QAbstractSocket::UnconnectedState||socket->state()==QAbstractSocket::ClosingState) {
-        terminate();
-    }
-    while(socket->bytesAvailable()<size)socket->waitForReadyRead(10);
+    while(socket->bytesAvailable()<size)socket->waitForReadyRead(100);
     socket->read((char*)dst,size);
 }
 template<typename T>
@@ -29,32 +26,30 @@ bool ServerThread::checkLogInfo(QString name, unsigned int pwshash) {
     else return true;
 }
 bool ServerThread::checkVersion(int version_code) {
-    return true;
+    return version_code>=version_v1;
 }
 void ServerThread::transFile(head_file_info *info) {
-    QFile file(basePath+"/"+info->file_name);
+    QFile file(basePath+"/"+QString::fromLatin1(info->file_name));
+    emit toLog(QString("transferring:")+QString::fromLatin1(info->file_name));
     file.open(QIODevice::WriteOnly);
     head_datablock *data = new head_datablock;
-    bool eof = false;
-    while(!eof) {
+    unsigned long long ts = 0;
+    while(true) {
         read(data,sizeof(head_datablock));
         if(data->eof==1) {
-            eof = true;
-            qDebug()<<"eof";
             file.write(data->data,data->valid_length);
             file.flush();
 
             break;
         } else {
             file.write(data->data,512);
+            ts+=512;
         }
-        if(file.bytesToWrite()>1024*512)file.flush();
     }
     file.flush();
     emit toLog(QString("A file transferrd:")+info->file_name);
     delete data;
     file.close();
-    qDebug()<<info->file_name;
 }
 void ServerThread::execCommand(command_info *info) {
 
@@ -68,12 +63,23 @@ void ServerThread::run() {
     head_apply * apply = new head_apply;
     if(socket->state()==QAbstractSocket::UnconnectedState||socket->state()==QAbstractSocket::ClosingState) {
         delete socket;
+        delete apply;
         return;
     }
-    read(apply,sizeof(head_apply));
+    if(socket->bytesAvailable()==0) {
+        socket->waitForReadyRead(5000);
+        if(socket->bytesAvailable()==0) {
+            emit toLog(tr("Waitting for response timeout!Connection closed"));
+            socket->close();
+            delete socket;
+            delete apply;
+            return;
+        }
+    }
+    read((char*)apply,sizeof(head_apply));
     if(!checkVersion(apply->version)) {
         response = make_return_code(version_unsuitable,0);
-        writeFlush(response,sizeof(head_apply));
+        writeFlush(response,sizeof(head_return_code));
         delete response;
         return;
     }
@@ -85,9 +91,9 @@ void ServerThread::run() {
             return;
         }
     }
-    emit toLog(QString("A user login:")+apply->user_name);
+    emit toLog(QString("A user login:")+QString::fromLatin1(apply->user_name));
     this->basePath+='/';
-    this->basePath+=apply->user_name;
+    this->basePath+=QString::fromLatin1(apply->user_name);
     QDir dir(basePath);
     if(!dir.exists())dir.mkdir(basePath);
     response = make_return_code(login_successful,0);
@@ -116,6 +122,8 @@ void ServerThread::run() {
             execCommand((command_info*)opeInfo);
         }
     }
+    response = make_return_code(ret_done,0);
+    writeFlush(response,sizeof(head_return_code));
     delete opeInfo;
     delete info;
     delete socket;

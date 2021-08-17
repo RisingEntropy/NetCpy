@@ -13,9 +13,9 @@ int fast_pow(int base,int pow) {
     return ret;
 }
 unsigned int hash(char *str) {
-    unsigned int len = (int)strlen(str),hash = 0;
+    unsigned int len = (int)strlen(str),hash = 19260817;
     for(int i = 0; i<len; i++) {
-        hash = ((hash * hash_base % hash_mod)+str[i]) % hash_mod;
+        hash = ((hash * hash_base)+str[i]);
     }
     return hash;
 }
@@ -28,7 +28,7 @@ int check_code(const struct head_datablock & block) {
     return code;
 }
 int get_version() {
-    return version_beta;
+    return version_v1;
 }
 head_return_code *make_return_code(int state, int info_count, char *info1, int size1, char *info2, int size2) {
     auto *ret = new head_return_code;//TODO:maybe I should use shared_ptr!!!!!!

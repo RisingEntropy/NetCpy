@@ -12,6 +12,9 @@ ToolKit::~ToolKit() {
 }
 
 void ToolKit::on_lineEdit_textChanged(const QString &arg1) {
-    ui->lineEdit_2->setText(QString::number(hash(arg1.toLatin1().data())));
+    if(!arg1.isEmpty())
+        ui->lineEdit_2->setText(QString::number(hash(arg1.toLatin1().data())));
+    else
+        ui->lineEdit_2->setText("");
 }
 

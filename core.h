@@ -7,7 +7,7 @@
 #include <QMap>
 #include <QString>
 
-const int hash_base = 31;
+const int hash_base = 19260817;
 const int hash_mod = 1000000007;
 const int check_code_mod = 998244353;
 
@@ -21,6 +21,7 @@ const int type_head_file_info = 0x6c;
 const int type_trans_info = 0x7c;
 //version code
 const int version_beta = 0x1a;
+const int version_v1 = 0x2a;
 //return code :
 const int connected = 0x1b;//connection accepted
 const int accepted = 0x10d;
@@ -30,6 +31,7 @@ const int version_unsuitable = 0x9b;
 const int argument_error = 0x4b;//argument of certain command is wrong!
 const int error = 0x5b;//unknown error,detailed information is in return code info
 const int busy_refuse = 0x6b;
+const int ret_done = 0x11b;
 //datagram category code:
 const int set_security = 0x1d;
 const int plugin = 0x2d;

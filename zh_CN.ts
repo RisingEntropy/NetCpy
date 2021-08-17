@@ -130,6 +130,14 @@
     </message>
 </context>
 <context>
+    <name>ServerThread</name>
+    <message>
+        <location filename="serverthread.cpp" line="75"/>
+        <source>Waitting for response timeout!Connection closed</source>
+        <translation>等待响应超时，连接关闭(可能不是客户端发来的数据报)</translation>
+    </message>
+</context>
+<context>
     <name>ServerUI</name>
     <message>
         <location filename="serverui.ui" line="14"/>
